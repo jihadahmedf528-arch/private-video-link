@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Private Video Link Admin</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#0b0911;
+    color:#fff;
+    font-family:Arial,sans-serif;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:18px;
+}
+
+h1{
+    font-size:24px;
+    margin-bottom:5px;
+}
+
+.subtitle{
+    color:#999;
+    font-size:13px;
+    margin-bottom:20px;
+}
+
+.box{
+    background:#17131f;
+    border:1px solid #2b2535;
+    border-radius:15px;
+    padding:18px;
+    margin-bottom:16px;
+}
+
+h2{
+    font-size:18px;
+    margin-top:0;
+}
+
+input,
+select{
+    width:100%;
+    padding:12px;
+    margin:6px 0 12px;
+    border-radius:9px;
+    border:1px solid #393244;
+    background:#0f0c15;
+    color:#fff;
+    outline:none;
+}
+
+input:focus,
+select:focus{
+    border-color:#7047ff;
+}
+
+button{
+    border:0;
+    border-radius:9px;
+    padding:11px 15px;
+    background:#7047ff;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+}
+
+button.secondary{
+    background:#292333;
+}
+
+button.danger{
+    background:#d93636;
+}
+
+.login{
+    max-width:500px;
+    margin:60px auto;
+}
+
+#dashboard{
+    display:none;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:10px;
+
+    margin-bottom:16px;
+}
+
+.stat{
+    background:#17131f;
+    border:1px solid #2b2535;
+    border-radius:12px;
+    padding:15px;
+}
+
+.stat-number{
+    font-size:24px;
+    font-weight:800;
+}
+
+.stat-label{
+    color:#999;
+    font-size:11px;
+    margin-top:4px;
+}
+
+.video{
+    background:#100d17;
+    border:1px solid #2a2434;
+    border-radius:11px;
+    padding:13px;
+    margin:9px 0;
+}
+
+.video-title{
+    font-weight:700;
+    margin-bottom:6px;
+}
+
+.video-info{
+    color:#999;
+    font-size:12px;
+    line-height:1.6;
+}
+
+.actions{
+    margin-top:9px;
+    display:flex;
+    gap:7px;
+}
+
+.actions button{
+    padding:8px 11px;
+    font-size:12px;
+}
+
+.message{
+    margin-top:10px;
+    font-size:13px;
+    color:#aaa;
+}
+
+@media(max-width:600px){
+
+    .stats{
+        grid-template-columns:
+            repeat(2,1fr);
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================
+     LOGIN
+========================= -->
+
+<div class="container">
+
+<div class="login box"
+     id="loginBox">
+
+    <h1>
+        🔐 Admin Panel
+    </h1>
+
+    <div class="subtitle">
+        Private Video Link
+    </div>
+
+    <input
+        id="adminKey"
+        type="password"
+        placeholder="Enter ADMIN_KEY">
+
+    <button
+        onclick="login()">
+
+        Login
+
+    </button>
+
+    <div
+        class="message"
+        id="loginMessage">
+    </div>
+
+</div>
+
+
+<!-- =========================
+     DASHBOARD
+========================= -->
+
+<div id="dashboard">
+
+<h1>
+    ⚙️ Private Video Link
+</h1>
+
+<div class="subtitle">
+    Admin Dashboard
+</div>
+
+
+<!-- STATS -->
+
+<div class="stats">
+
+    <div class="stat">
+
+        <div
+            class="stat-number"
+            id="totalVideos">
+            0
+        </div>
+
+        <div class="stat-label">
+            Total Videos
+        </div>
+
+    </div>
+
+
+    <div class="stat">
+
+        <div
+            class="stat-number"
+            id="activeVideos">
+            0
+        </div>
+
+        <div class="stat-label">
+            Active Videos
+        </div>
+
+    </div>
+
+
+    <div class="stat">
+
+        <div
+            class="stat-number"
+            id="provider">
+            -
+        </div>
+
+        <div class="stat-label">
+            Ad Provider
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     AD SETTINGS
+========================= -->
+
+<div class="box">
+
+<h2>
+    📢 Ad & Unlock Settings
+</h2>
+
+<label>
+    Ad Provider
+</label>
+
+<select id="adProvider">
+
+    <option value="adsgram">
+        AdsGram
+    </option>
+
+    <option value="monetag">
+        Monetag
+    </option>
+
+</select>
+
+
+<label>
+    Default Required Ads
+</label>
+
+<input
+    id="defaultAds"
+    type="number"
+    min="1"
+    value="3"
+    placeholder="Example: 3">
+
+
+<label>
+    AdsGram Block ID
+</label>
+
+<input
+    id="adsgramBlock"
+    placeholder="AdsGram Block ID">
+
+
+<label>
+    Monetag Zone ID
+</label>
+
+<input
+    id="monetagZone"
+    placeholder="Monetag Zone ID">
+
+
+<button
+    onclick="saveSettings()">
+
+    💾 Save Settings
+
+</button>
+
+<div
+    class="message"
+    id="settingsMessage">
+</div>
+
+</div>
+
+
+<!-- =========================
+     VIDEO FORM
+========================= -->
+
+<div class="box">
+
+<h2>
+    🎬 Add / Edit Video
+</h2>
+
+<input
+    id="videoId"
+    placeholder="Video ID">
+
+<input
+    id="videoTitle"
+    placeholder="Video Title">
+
+<input
+    id="videoCategory"
+    placeholder="Category">
+
+<label>
+    Section
+</label>
+
+<select id="videoSection">
+
+    <option value="Trending">
+        Trending
+    </option>
+
+    <option value="Premium">
+        Premium
+    </option>
+
+</select>
+
+<input
+    id="thumbnailUrl"
+    placeholder="Thumbnail URL">
+
+<input
+    id="videoUrl"
+    placeholder="Video URL">
+
+<input
+    id="videoAds"
+    type="number"
+    min="1"
+    value="3"
+    placeholder="Required Ads">
+
+<input
+    id="videoViews"
+    type="number"
+    min="0"
+    value="0"
+    placeholder="Views">
+
+
+<button
+    onclick="saveVideo()">
+
+    💾 Save Video
+
+</button>
+
+<button
+    class="secondary"
+    onclick="clearForm()">
+
+    Clear
+
+</button>
+
+<div
+    class="message"
+    id="videoMessage">
+</div>
+
+</div>
+
+
+<!-- =========================
+     VIDEO LIST
+========================= -->
+
+<div class="box">
+
+<h2>
+    📚 Video Library
+</h2>
+
+<div id="videoList">
+
+    Loading...
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+
+let ADMIN_KEY = "";
+
+let videos = [];
+
+
+/* =========================
+   API HEADERS
+========================= */
+
+function headers(){
+
+    return {
+
+        "Content-Type":
+            "application/json",
+
+        "x-admin-key":
+            ADMIN_KEY
+
+    };
+
+}
+
+
+/* =========================
+   LOGIN
+========================= */
+
+async function login(){
+
+    const key =
+        document.getElementById(
+            "adminKey"
+        ).value.trim();
+
+    if(!key){
+
+        document.getElementById(
+            "loginMessage"
+        ).textContent =
+            "Please enter ADMIN_KEY.";
+
+        return;
+
+    }
+
+    ADMIN_KEY = key;
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/videos",
+                {
+                    headers:{
+                        "x-admin-key":
+                            ADMIN_KEY
+                    }
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Invalid ADMIN_KEY"
+            );
+
+        }
+
+
+        document.getElementById(
+            "loginBox"
+        ).style.display =
+            "none";
+
+
+        document.getElementById(
+            "dashboard"
+        ).style.display =
+            "block";
+
+
+        await loadSettings();
+
+        await loadVideos();
+
+
+    }catch(error){
+
+        ADMIN_KEY = "";
+
+        document.getElementById(
+            "loginMessage"
+        ).textContent =
+            "❌ Wrong ADMIN_KEY.";
+
+    }
+
+}
+
+
+/* =========================
+   LOAD SETTINGS
+========================= */
+
+async function loadSettings(){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/settings",
+                {
+                    headers:{
+                        "x-admin-key":
+                            ADMIN_KEY
+                    }
+                }
+            );
+
+        const data =
+            await response.json();
+
+
+        document.getElementById(
+            "adProvider"
+        ).value =
+            data.provider ||
+            "adsgram";
+
+
+        document.getElementById(
+            "defaultAds"
+        ).value =
+            data.requiredAdsDefault ||
+            3;
+
+
+        document.getElementById(
+            "adsgramBlock"
+        ).value =
+            data.adsgramBlockId ||
+            "";
+
+
+        document.getElementById(
+            "monetagZone"
+        ).value =
+            data.monetagZoneId ||
+            "";
+
+
+        document.getElementById(
+            "provider"
+        ).textContent =
+            data.provider ||
+            "adsgram";
+
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+/* =========================
+   SAVE SETTINGS
+========================= */
+
+async function saveSettings(){
+
+    const data = {
+
+        provider:
+            document.getElementById(
+                "adProvider"
+            ).value,
+
+        requiredAdsDefault:
+            Number(
+                document.getElementById(
+                    "defaultAds"
+                ).value || 3
+            ),
+
+        adsgramBlockId:
+            document.getElementById(
+                "adsgramBlock"
+            ).value.trim(),
+
+        monetagZoneId:
+            document.getElementById(
+                "monetagZone"
+            ).value.trim()
+
+    };
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/settings",
+                {
+                    method:"POST",
+
+                    headers:headers(),
+
+                    body:
+                        JSON.stringify(data)
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error();
+
+        }
+
+
+        document.getElementById(
+            "settingsMessage"
+        ).textContent =
+            "✅ Settings saved.";
+
+        document.getElementById(
+            "provider"
+        ).textContent =
+            data.provider;
+
+
+    }catch(error){
+
+        document.getElementById(
+            "settingsMessage"
+        ).textContent =
+            "❌ Failed to save settings.";
+
+    }
+
+}
+
+
+/* =========================
+   LOAD VIDEOS
+========================= */
+
+async function loadVideos(){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/videos",
+                {
+                    headers:{
+                        "x-admin-key":
+                            ADMIN_KEY
+                    }
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error();
+
+        }
+
+
+        videos =
+            await response.json();
+
+
+        renderVideos();
+
+
+    }catch(error){
+
+        document.getElementById(
+            "videoList"
+        ).textContent =
+            "Failed to load videos.";
+
+    }
+
+}
+
+
+/* =========================
+   RENDER VIDEOS
+========================= */
+
+function renderVideos(){
+
+    const list =
+        document.getElementById(
+            "videoList"
+        );
+
+
+    document.getElementById(
+        "totalVideos"
+    ).textContent =
+        videos.length;
+
+
+    document.getElementById(
+        "activeVideos"
+    ).textContent =
+        videos.filter(
+            video =>
+            video.active !== false
+        ).length;
+
+
+    if(videos.length === 0){
+
+        list.innerHTML =
+            "<div class='message'>No videos yet.</div>";
+
+        return;
+
+    }
+
+
+    list.innerHTML = "";
+
+
+    videos.forEach(video => {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.className =
+            "video";
+
+
+        div.innerHTML = `
+
+            <div class="video-title">
+
+                ${escapeHtml(
+                    video.title ||
+                    "Untitled"
+                )}
+
+            </div>
+
+            <div class="video-info">
+
+                ID:
+                ${escapeHtml(
+                    video.id
+                )}
+
+                <br>
+
+                Category:
+                ${escapeHtml(
+                    video.category ||
+                    "General"
+                )}
+
+                <br>
+
+                Section:
+                ${escapeHtml(
+                    video.section ||
+                    "Premium"
+                )}
+
+                <br>
+
+                Required Ads:
+                ${Number(
+                    video.requiredAds ||
+                    3
+                )}
+
+                <br>
+
+                Views:
+                ${Number(
+                    video.views ||
+                    0
+                )}
+
+            </div>
+
+            <div class="actions">
+
+                <button
+                    onclick="editVideo('${escapeJs(
+                        video.id
+                    )}')">
+
+                    ✏️ Edit
+
+                </button>
+
+                <button
+                    class="danger"
+                    onclick="deleteVideo('${escapeJs(
+                        video.id
+                    )}')">
+
+                    🗑 Delete
+
+                </button>
+
+            </div>
+
+        `;
+
+
+        list.appendChild(div);
+
+    });
+
+}
+
+
+/* =========================
+   SAVE VIDEO
+========================= */
+
+async function saveVideo(){
+
+    const id =
+        document.getElementById(
+            "videoId"
+        ).value.trim();
+
+
+    if(!id){
+
+        alert(
+            "Video ID is required."
+        );
+
+        return;
+
+    }
+
+
+    const video = {
+
+        id:id,
+
+        title:
+            document.getElementById(
+                "videoTitle"
+            ).value.trim(),
+
+        category:
+            document.getElementById(
+                "videoCategory"
+            ).value.trim() ||
+            "General",
+
+        section:
+            document.getElementById(
+                "videoSection"
+            ).value,
+
+        thumbnailUrl:
+            document.getElementById(
+                "thumbnailUrl"
+            ).value.trim(),
+
+        videoUrl:
+            document.getElementById(
+                "videoUrl"
+            ).value.trim(),
+
+        requiredAds:
+            Number(
+                document.getElementById(
+                    "videoAds"
+                ).value || 3
+            ),
+
+        views:
+            Number(
+                document.getElementById(
+                    "videoViews"
+                ).value || 0
+            ),
+
+        active:true
+
+    };
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/videos",
+                {
+                    method:"POST",
+
+                    headers:headers(),
+
+                    body:
+                        JSON.stringify(
+                            video
+                        )
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error();
+
+        }
+
+
+        document.getElementById(
+            "videoMessage"
+        ).textContent =
+            "✅ Video saved successfully.";
+
+
+        clearForm();
+
+        await loadVideos();
+
+
+    }catch(error){
+
+        document.getElementById(
+            "videoMessage"
+        ).textContent =
+            "❌ Failed to save video.";
+
+    }
+
+}
+
+
+/* =========================
+   EDIT VIDEO
+========================= */
+
+function editVideo(id){
+
+    const video =
+        videos.find(
+            item =>
+            item.id === id
+        );
+
+
+    if(!video){
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "videoId"
+    ).value =
+        video.id || "";
+
+
+    document.getElementById(
+        "videoTitle"
+    ).value =
+        video.title || "";
+
+
+    document.getElementById(
+        "videoCategory"
+    ).value =
+        video.category || "";
+
+
+    document.getElementById(
+        "videoSection"
+    ).value =
+        video.section ||
+        "Premium";
+
+
+    document.getElementById(
+        "thumbnailUrl"
+    ).value =
+        video.thumbnailUrl ||
+        "";
+
+
+    document.getElementById(
+        "videoUrl"
+    ).value =
+        video.videoUrl ||
+        "";
+
+
+    document.getElementById(
+        "videoAds"
+    ).value =
+        video.requiredAds ||
+        3;
+
+
+    document.getElementById(
+        "videoViews"
+    ).value =
+        video.views ||
+        0;
+
+
+    window.scrollTo({
+        top:0,
+        behavior:"smooth"
+    });
+
+}
+
+
+/* =========================
+   DELETE VIDEO
+========================= */
+
+async function deleteVideo(id){
+
+    if(
+        !confirm(
+            "Are you sure you want to delete this video?"
+        )
+    ){
+
+        return;
+
+    }
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/admin/videos/" +
+                encodeURIComponent(id),
+                {
+                    method:"DELETE",
+
+                    headers:{
+                        "x-admin-key":
+                            ADMIN_KEY
+                    }
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error();
+
+        }
+
+
+        await loadVideos();
+
+
+    }catch(error){
+
+        alert(
+            "Failed to delete video."
+        );
+
+    }
+
+}
+
+
+/* =========================
+   CLEAR FORM
+========================= */
+
+function clearForm(){
+
+    document.getElementById(
+        "videoId"
+    ).value = "";
+
+    document.getElementById(
+        "videoTitle"
+    ).value = "";
+
+    document.getElementById(
+        "videoCategory"
+    ).value = "";
+
+    document.getElementById(
+        "videoSection"
+    ).value =
+        "Trending";
+
+    document.getElementById(
+        "thumbnailUrl"
+    ).value = "";
+
+    document.getElementById(
+        "videoUrl"
+    ).value = "";
+
+    document.getElementById(
+        "videoAds"
+    ).value = 3;
+
+    document.getElementById(
+        "videoViews"
+    ).value = 0;
+
+}
+
+
+/* =========================
+   ESCAPE
+========================= */
+
+function escapeHtml(value){
+
+    return String(value)
+        .replace(
+            /[&<>"']/g,
+            character => {
+
+                const map = {
+
+                    "&":"&amp;",
+                    "<":"&lt;",
+                    ">":"&gt;",
+                    '"':"&quot;",
+                    "'":"&#039;"
+
+                };
+
+                return map[
+                    character
+                ];
+
+            }
+        );
+
+}
+
+
+function escapeJs(value){
+
+    return String(value)
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
+
+}
+
+</script>
+
+</body>
+
+</html>
