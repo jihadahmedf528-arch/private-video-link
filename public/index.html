@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Private Video Link</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    background:#0b0911;
+    color:#ffffff;
+    font-family:Arial,sans-serif;
+    min-height:100vh;
+}
+
+.header{
+    position:sticky;
+    top:0;
+    z-index:20;
+    padding:16px;
+    background:#100d18;
+    border-bottom:1px solid #292333;
+}
+
+.logo{
+    font-size:22px;
+    font-weight:800;
+}
+
+.subtitle{
+    color:#9d96aa;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.categories{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:14px 14px 5px;
+}
+
+.categories::-webkit-scrollbar{
+    display:none;
+}
+
+.category{
+    border:1px solid #393246;
+    background:#17131f;
+    color:#ddd;
+    padding:8px 14px;
+    border-radius:20px;
+    white-space:nowrap;
+    cursor:pointer;
+}
+
+.category.active{
+    background:#7047ff;
+    border-color:#7047ff;
+    color:#fff;
+}
+
+.section-title{
+    padding:18px 14px 10px;
+    font-size:18px;
+    font-weight:800;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
+    padding:0 12px 90px;
+}
+
+.card{
+    background:#17131f;
+    border:1px solid #292333;
+    border-radius:14px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.card:active{
+    transform:scale(.97);
+}
+
+.thumbnail-box{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/10;
+    background:#25202e;
+}
+
+.thumbnail{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.lock{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:#000b;
+    padding:5px 8px;
+    border-radius:8px;
+    font-size:11px;
+}
+
+.play{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    background:#7047ff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+}
+
+.card-info{
+    padding:10px;
+}
+
+.card-title{
+    font-size:14px;
+    font-weight:700;
+    line-height:1.35;
+}
+
+.card-meta{
+    color:#999;
+    font-size:11px;
+    margin-top:7px;
+}
+
+.pagination{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    padding:10px 15px 35px;
+}
+
+.pagination button{
+    border:0;
+    background:#7047ff;
+    color:#fff;
+    padding:9px 14px;
+    border-radius:9px;
+}
+
+.pagination button:disabled{
+    opacity:.35;
+}
+
+.page-number{
+    color:#aaa;
+    font-size:13px;
+}
+
+.empty{
+    text-align:center;
+    color:#888;
+    padding:60px 20px;
+}
+
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#000b;
+    align-items:flex-end;
+}
+
+.modal-box{
+    width:100%;
+    background:#17131f;
+    border-radius:22px 22px 0 0;
+    padding:22px;
+    border-top:1px solid #312a3e;
+}
+
+.modal-title{
+    font-size:19px;
+    font-weight:800;
+}
+
+.modal-text{
+    color:#aaa;
+    font-size:13px;
+    line-height:1.5;
+    margin:10px 0 16px;
+}
+
+.progress{
+    background:#292333;
+    height:8px;
+    border-radius:20px;
+    overflow:hidden;
+}
+
+.progress-bar{
+    width:0%;
+    height:100%;
+    background:#7047ff;
+    transition:.3s;
+}
+
+.ad-count{
+    text-align:center;
+    margin:10px 0;
+    color:#bbb;
+    font-size:13px;
+}
+
+.modal-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.modal-buttons button{
+    flex:1;
+    padding:13px;
+    border:0;
+    border-radius:10px;
+    font-weight:700;
+}
+
+.watch-ad{
+    background:#7047ff;
+    color:#fff;
+}
+
+.cancel{
+    background:#292333;
+    color:#fff;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+
+    <div class="logo">
+        🎬 Private Video Link
+    </div>
+
+    <div class="subtitle">
+        Watch • Unlock • Enjoy
+    </div>
+
+</div>
+
+<div class="categories" id="categories">
+</div>
+
+<div class="section-title">
+    🔥 Trending Now
+</div>
+
+<div class="grid" id="videoGrid">
+</div>
+
+<div class="empty" id="empty" style="display:none;">
+    No videos available.
+</div>
+
+<div class="pagination">
+
+    <button id="prevBtn"
+            onclick="previousPage()">
+        ‹ Prev
+    </button>
+
+    <span class="page-number"
+          id="pageNumber">
+        Page 1
+    </span>
+
+    <button id="nextBtn"
+            onclick="nextPage()">
+        Next ›
+    </button>
+
+</div>
+
+<!-- Unlock Modal -->
+
+<div class="modal" id="unlockModal">
+
+    <div class="modal-box">
+
+        <div class="modal-title">
+            🔒 Unlock Video
+        </div>
+
+        <div class="modal-text"
+             id="unlockText">
+
+            Watch the required ads to unlock this video.
+            
+        </div>
+
+        <div class="progress">
+
+            <div class="progress-bar"
+                 id="progressBar">
+            </div>
+
+        </div>
+
+        <div class="ad-count"
+             id="adCount">
+
+            0 / 3 ads completed
+
+        </div>
+
+        <div class="modal-buttons">
+
+            <button class="watch-ad"
+                    onclick="watchAd()">
+
+                ▶ Watch Ad
+
+            </button>
+
+            <button class="cancel"
+                    onclick="closeModal()">
+
+                Cancel
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const tg =
+    window.Telegram &&
+    window.Telegram.WebApp;
+
+if(tg){
+
+    tg.ready();
+
+    tg.expand();
+
+}
+
+let videos = [];
+
+let currentPage = 1;
+
+const perPage = 8;
+
+let selectedVideo = null;
+
+let requiredAds = 3;
+
+let completedAds = 0;
+
+let currentCategory = "All";
+
+
+/* =========================
+   LOAD CONFIG
+========================= */
+
+async function loadConfig(){
+
+    try{
+
+        const response =
+            await fetch("/api/config");
+
+        const config =
+            await response.json();
+
+        requiredAds =
+            Number(
+                config.requiredAdsDefault || 3
+            );
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+/* =========================
+   LOAD VIDEOS
+========================= */
+
+async function loadVideos(){
+
+    try{
+
+        const response =
+            await fetch("/api/videos");
+
+        videos =
+            await response.json();
+
+        createCategories();
+
+        renderVideos();
+
+    }catch(error){
+
+        console.error(error);
+
+        document.getElementById(
+            "empty"
+        ).style.display="block";
+
+    }
+
+}
+
+
+/* =========================
+   CATEGORIES
+========================= */
+
+function createCategories(){
+
+    const categories =
+        [
+            "All",
+            ...new Set(
+                videos.map(
+                    video =>
+                    video.category ||
+                    "General"
+                )
+            )
+        ];
+
+    const container =
+        document.getElementById(
+            "categories"
+        );
+
+    container.innerHTML = "";
+
+    categories.forEach(category => {
+
+        const button =
+            document.createElement("button");
+
+        button.className =
+            "category" +
+            (
+                category === currentCategory
+                ? " active"
+                : ""
+            );
+
+        button.textContent =
+            category;
+
+        button.onclick = () => {
+
+            currentCategory =
+                category;
+
+            currentPage = 1;
+
+            createCategories();
+
+            renderVideos();
+
+        };
+
+        container.appendChild(button);
+
+    });
+
+}
+
+
+/* =========================
+   FILTER
+========================= */
+
+function filteredVideos(){
+
+    if(currentCategory === "All"){
+
+        return videos;
+
+    }
+
+    return videos.filter(
+        video =>
+        (
+            video.category ||
+            "General"
+        ) === currentCategory
+    );
+
+}
+
+
+/* =========================
+   RENDER
+========================= */
+
+function renderVideos(){
+
+    const grid =
+        document.getElementById(
+            "videoGrid"
+        );
+
+    const empty =
+        document.getElementById(
+            "empty"
+        );
+
+    const list =
+        filteredVideos();
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                list.length / perPage
+            )
+        );
+
+    if(currentPage > totalPages){
+
+        currentPage =
+            totalPages;
+
+    }
+
+    const start =
+        (currentPage - 1) *
+        perPage;
+
+    const pageVideos =
+        list.slice(
+            start,
+            start + perPage
+        );
+
+    grid.innerHTML = "";
+
+    if(pageVideos.length === 0){
+
+        empty.style.display =
+            "block";
+
+    }else{
+
+        empty.style.display =
+            "none";
+
+    }
+
+    pageVideos.forEach(video => {
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "card";
+
+        const ads =
+            Number(
+                video.requiredAds ||
+                requiredAds ||
+                3
+            );
+
+        card.innerHTML = `
+
+            <div class="thumbnail-box">
+
+                <img
+                    class="thumbnail"
+                    src="${escapeHtml(
+                        video.thumbnailUrl || ""
+                    )}"
+                    onerror="
+                        this.style.opacity='0.25'
+                    "
+                >
+
+                <div class="lock">
+                    🔒 ${ads} Ads
+                </div>
+
+                <div class="play">
+                    ▶
+                </div>
+
+            </div>
+
+            <div class="card-info">
+
+                <div class="card-title">
+
+                    ${escapeHtml(
+                        video.title ||
+                        "Untitled Video"
+                    )}
+
+                </div>
+
+                <div class="card-meta">
+
+                    ${escapeHtml(
+                        video.category ||
+                        "General"
+                    )}
+
+                    •
+
+                    ${Number(
+                        video.views || 0
+                    )} views
+
+                </div>
+
+            </div>
+
+        `;
+
+        card.onclick =
+            () => openVideo(video);
+
+        grid.appendChild(card);
+
+    });
+
+    document.getElementById(
+        "pageNumber"
+    ).textContent =
+        `Page ${currentPage} / ${totalPages}`;
+
+    document.getElementById(
+        "prevBtn"
+    ).disabled =
+        currentPage <= 1;
+
+    document.getElementById(
+        "nextBtn"
+    ).disabled =
+        currentPage >= totalPages;
+
+}
+
+
+/* =========================
+   PAGINATION
+========================= */
+
+function previousPage(){
+
+    if(currentPage > 1){
+
+        currentPage--;
+
+        renderVideos();
+
+        window.scrollTo({
+            top:0,
+            behavior:"smooth"
+        });
+
+    }
+
+}
+
+function nextPage(){
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                filteredVideos().length /
+                perPage
+            )
+        );
+
+    if(currentPage < totalPages){
+
+        currentPage++;
+
+        renderVideos();
+
+        window.scrollTo({
+            top:0,
+            behavior:"smooth"
+        });
+
+    }
+
+}
+
+
+/* =========================
+   OPEN VIDEO
+========================= */
+
+function openVideo(video){
+
+    selectedVideo =
+        video;
+
+    completedAds = 0;
+
+    requiredAds =
+        Number(
+            video.requiredAds ||
+            requiredAds ||
+            3
+        );
+
+    document.getElementById(
+        "unlockText"
+    ).textContent =
+        `Watch ${requiredAds} rewarded ad(s) to unlock this video.`;
+
+    updateProgress();
+
+    document.getElementById(
+        "unlockModal"
+    ).style.display =
+        "flex";
+
+}
+
+
+/* =========================
+   CLOSE MODAL
+========================= */
+
+function closeModal(){
+
+    document.getElementById(
+        "unlockModal"
+    ).style.display =
+        "none";
+
+    selectedVideo =
+        null;
+
+}
+
+
+/* =========================
+   AD WATCH
+========================= */
+
+async function watchAd(){
+
+    /*
+       Actual rewarded-ad SDK integration
+       can be connected here after the
+       AdsGram / Monetag publisher settings
+       are added.
+
+       Reward should only be counted after
+       the official SDK confirms completion.
+    */
+
+    alert(
+        "Rewarded ad provider is not configured yet. We will connect it after Firebase and Render setup."
+    );
+
+}
+
+
+/* =========================
+   PROGRESS
+========================= */
+
+function updateProgress(){
+
+    const percent =
+        Math.min(
+            100,
+            (
+                completedAds /
+                requiredAds
+            ) * 100
+        );
+
+    document.getElementById(
+        "progressBar"
+    ).style.width =
+        percent + "%";
+
+    document.getElementById(
+        "adCount"
+    ).textContent =
+        `${completedAds} / ${requiredAds} ads completed`;
+
+}
+
+
+/* =========================
+   ESCAPE HTML
+========================= */
+
+function escapeHtml(value){
+
+    return String(value)
+        .replace(
+            /[&<>"']/g,
+            character => {
+
+                const map = {
+
+                    "&":"&amp;",
+                    "<":"&lt;",
+                    ">":"&gt;",
+                    '"':"&quot;",
+                    "'":"&#039;"
+
+                };
+
+                return map[
+                    character
+                ];
+
+            }
+        );
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+async function start(){
+
+    await loadConfig();
+
+    await loadVideos();
+
+}
+
+start();
+
+</script>
+
+</body>
+</html>
