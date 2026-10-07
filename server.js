@@ -11,11 +11,11 @@ app.use(express.static("public"));
 
 const PORT = process.env.PORT || 10000;
 
+let db = null;
+
 /* =========================
    FIREBASE
 ========================= */
-
-let db = null;
 
 try {
   if (
@@ -92,7 +92,10 @@ if (process.env.BOT_TOKEN) {
   });
 
   bot.on("polling_error", (error) => {
-    console.error("Telegram polling error:", error.message);
+    console.error(
+      "Telegram polling error:",
+      error.message
+    );
   });
 
   console.log("Telegram bot started");
@@ -112,7 +115,7 @@ app.get("/health", (req, res) => {
 });
 
 /* =========================
-   APP CONFIG
+   ADS CONFIG
 ========================= */
 
 app.get("/api/config", async (req, res) => {
@@ -156,7 +159,71 @@ app.get("/api/config", async (req, res) => {
 });
 
 /* =========================
-   PUBLIC VIDEO LIST
+   ADSGRAM REWARD URL
+========================= */
+
+app.get("/api/adsgram/reward", async (req, res) => {
+  const userId = req.query.userid;
+
+  if (!userId) {
+    return res.status(400).json({
+      ok: false,
+      error: "userid is required"
+    });
+  }
+
+  if (!db) {
+    return res.status(500).json({
+      ok: false,
+      error: "Firebase is not configured"
+    });
+  }
+
+  try {
+    const rewardRef = db.ref(
+      `adRewards/${userId}`
+    );
+
+    const snapshot = await rewardRef.once("value");
+
+    const current = snapshot.val() || {
+      total: 0,
+      lastRewardAt: 0
+    };
+
+    const newTotal =
+      Number(current.total || 0) + 1;
+
+    await rewardRef.set({
+      total: newTotal,
+      lastRewardAt: Date.now()
+    });
+
+    console.log(
+      `AdsGram reward received for user ${userId}`
+    );
+
+    return res.json({
+      ok: true,
+      userId: userId,
+      totalRewards: newTotal
+    });
+
+  } catch (error) {
+    console.error(
+      "AdsGram reward error:",
+      error.message
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error: "Reward processing failed"
+    });
+  }
+});
+
+/* =========================
+   VIDEOS
 ========================= */
 
 app.get("/api/videos", async (req, res) => {
@@ -176,9 +243,12 @@ app.get("/api/videos", async (req, res) => {
         id,
         ...video
       }))
-      .filter((video) => video.active !== false);
+      .filter(
+        (video) => video.active !== false
+      );
 
     res.json(videos);
+
   } catch (error) {
     console.error(error.message);
 
@@ -203,7 +273,7 @@ function adminAuthorized(req) {
 }
 
 /* =========================
-   ADMIN - GET VIDEOS
+   ADMIN VIDEOS
 ========================= */
 
 app.get("/api/admin/videos", async (req, res) => {
@@ -232,6 +302,7 @@ app.get("/api/admin/videos", async (req, res) => {
     );
 
     res.json(videos);
+
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -240,7 +311,7 @@ app.get("/api/admin/videos", async (req, res) => {
 });
 
 /* =========================
-   ADMIN - ADD / UPDATE VIDEO
+   ADD / UPDATE VIDEO
 ========================= */
 
 app.post("/api/admin/videos", async (req, res) => {
@@ -268,8 +339,11 @@ app.post("/api/admin/videos", async (req, res) => {
     await db
       .ref(`videos/${video.id}`)
       .set({
-        title: video.title || "Untitled",
-        category: video.category || "General",
+        title:
+          video.title || "Untitled",
+
+        category:
+          video.category || "General",
 
         section:
           video.section || "Premium",
@@ -297,6 +371,7 @@ app.post("/api/admin/videos", async (req, res) => {
       ok: true,
       message: "Video saved successfully"
     });
+
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -305,7 +380,7 @@ app.post("/api/admin/videos", async (req, res) => {
 });
 
 /* =========================
-   ADMIN - DELETE VIDEO
+   DELETE VIDEO
 ========================= */
 
 app.delete(
@@ -333,6 +408,7 @@ app.delete(
         ok: true,
         message: "Video deleted"
       });
+
     } catch (error) {
       res.status(500).json({
         error: error.message
@@ -342,7 +418,7 @@ app.delete(
 );
 
 /* =========================
-   ADMIN - GET SETTINGS
+   ADMIN SETTINGS
 ========================= */
 
 app.get("/api/admin/settings", async (req, res) => {
@@ -364,6 +440,7 @@ app.get("/api/admin/settings", async (req, res) => {
     res.json(
       snapshot.val() || {}
     );
+
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -372,7 +449,7 @@ app.get("/api/admin/settings", async (req, res) => {
 });
 
 /* =========================
-   ADMIN - SAVE SETTINGS
+   SAVE ADMIN SETTINGS
 ========================= */
 
 app.post("/api/admin/settings", async (req, res) => {
@@ -411,6 +488,7 @@ app.post("/api/admin/settings", async (req, res) => {
       ok: true,
       message: "Settings saved"
     });
+
   } catch (error) {
     res.status(500).json({
       error: error.message
