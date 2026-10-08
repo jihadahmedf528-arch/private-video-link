@@ -8,7 +8,9 @@
 <title>Private Video Link</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+      
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+      
 <style>
 
 *{
@@ -384,7 +386,11 @@ let selectedVideo = null;
 let requiredAds = 3;
 
 let completedAds = 0;
-
+      
+let adsgramBlockId = "52566";
+      
+let watchingAd = false;
+      
 let currentCategory = "All";
 
 
@@ -787,23 +793,144 @@ function closeModal(){
 
 async function watchAd(){
 
-    /*
-       Actual rewarded-ad SDK integration
-       can be connected here after the
-       AdsGram / Monetag publisher settings
-       are added.
+    if(watchingAd){
+        return;
+    }
 
-       Reward should only be counted after
-       the official SDK confirms completion.
-    */
+    if(!selectedVideo){
+        return;
+    }
 
-    alert(
-        "Rewarded ad provider is not configured yet. We will connect it after Firebase and Render setup."
-    );
+    if(!window.Adsgram){
+        alert("AdsGram SDK এখনো লোড হয়নি। আবার চেষ্টা করুন।");
+        return;
+    }
 
+    if(!adsgramBlockId){
+        alert("AdsGram Block ID পাওয়া যায়নি।");
+        return;
+    }
+
+    watchingAd = true;
+
+    const button =
+        document.querySelector(".watch-ad");
+
+    if(button){
+        button.disabled = true;
+        button.textContent = "⏳ Loading Ad...";
+    }
+
+    try{
+
+        const AdController =
+            window.Adsgram.init({
+                blockId: adsgramBlockId
+            });
+
+        const result =
+            await AdController.show();
+
+        /*
+         * Rewarded ad সম্পূর্ণ দেখা হলে
+         * AdsGram promise resolve করবে।
+         */
+
+        if(result && result.done === false){
+            throw new Error(
+                "Ad was not completed."
+            );
+        }
+
+        completedAds++;
+
+        updateProgress();
+
+        if(completedAds >= requiredAds){
+
+            alert(
+                "✅ Ad requirement completed!\n\nVideo unlocked."
+            );
+
+            unlockVideo();
+
+        }else{
+
+            const remaining =
+                requiredAds - completedAds;
+
+            alert(
+                `✅ Ad completed!\n\nআরও ${remaining} টি ad দেখুন।`
+            );
+        }
+
+    }catch(error){
+
+        console.log(
+            "AdsGram error:",
+            error
+        );
+
+        alert(
+            "⚠️ Ad দেখানো যায়নি। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+        );
+
+    }finally{
+
+        watchingAd = false;
+
+        if(button){
+
+            button.disabled = false;
+
+            button.textContent =
+                "▶ Watch Ad";
+        }
+    }
 }
 
+/* =========================
+   UNLOCK VIDEO
+========================= */
 
+function unlockVideo(){
+
+    if(!selectedVideo){
+        return;
+    }
+
+    const videoUrl =
+        selectedVideo.videoUrl;
+
+    if(!videoUrl){
+
+        alert(
+            "⚠️ এই ভিডিওর Video URL সেট করা হয়নি।"
+        );
+
+        return;
+    }
+
+    closeModal();
+
+    if(
+        tg &&
+        typeof tg.openLink === "function"
+    ){
+
+        tg.openLink(videoUrl);
+
+    }else{
+
+        window.open(
+            videoUrl,
+            "_blank"
+        );
+
+    }
+}
+
+      
 /* =========================
    PROGRESS
 ========================= */
