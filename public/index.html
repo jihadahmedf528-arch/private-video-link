@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
 <title>Private Video Link</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-      
+
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-      
+
 <style>
 
 *{
@@ -184,6 +186,10 @@ body{
     padding:60px 20px;
 }
 
+/* =========================
+   VIDEO DETAILS MODAL
+========================= */
+
 .modal{
     display:none;
     position:fixed;
@@ -213,6 +219,25 @@ body{
     margin:10px 0 16px;
 }
 
+.preview-info{
+    background:#211c2b;
+    border:1px solid #342d40;
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:15px;
+}
+
+.preview-title{
+    font-size:13px;
+    font-weight:700;
+}
+
+.preview-meta{
+    color:#999;
+    font-size:11px;
+    margin-top:5px;
+}
+
 .progress{
     background:#292333;
     height:8px;
@@ -237,10 +262,12 @@ body{
 .modal-buttons{
     display:flex;
     gap:10px;
+    flex-wrap:wrap;
 }
 
 .modal-buttons button{
     flex:1;
+    min-width:130px;
     padding:13px;
     border:0;
     border-radius:10px;
@@ -252,12 +279,28 @@ body{
     color:#fff;
 }
 
+.open-video{
+    background:#19a974;
+    color:#fff;
+}
+
 .cancel{
     background:#292333;
     color:#fff;
 }
 
+/* =========================
+   LOADING
+========================= */
+
+.loading{
+    text-align:center;
+    color:#999;
+    padding:50px 20px;
+}
+
 </style>
+
 </head>
 
 <body>
@@ -274,55 +317,110 @@ body{
 
 </div>
 
-<div class="categories" id="categories">
+
+<div class="categories"
+     id="categories">
 </div>
+
 
 <div class="section-title">
     🔥 Trending Now
 </div>
 
-<div class="grid" id="videoGrid">
+
+<div class="grid"
+     id="videoGrid">
 </div>
 
-<div class="empty" id="empty" style="display:none;">
-    No videos available.
+
+<div class="loading"
+     id="loading">
+
+    Loading videos...
+
 </div>
+
+
+<div class="empty"
+     id="empty"
+     style="display:none;">
+
+    No videos available.
+
+</div>
+
 
 <div class="pagination">
 
     <button id="prevBtn"
             onclick="previousPage()">
+
         ‹ Prev
+
     </button>
 
     <span class="page-number"
           id="pageNumber">
+
         Page 1
+
     </span>
 
     <button id="nextBtn"
             onclick="nextPage()">
+
         Next ›
+
     </button>
 
 </div>
 
-<!-- Unlock Modal -->
 
-<div class="modal" id="unlockModal">
+<!-- =========================
+     VIDEO MODAL
+========================= -->
+
+<div class="modal"
+     id="unlockModal">
 
     <div class="modal-box">
 
-        <div class="modal-title">
-            🔒 Unlock Video
+        <div class="modal-title"
+             id="modalTitle">
+
+            🎬 Video
+
         </div>
+
+
+        <div class="preview-info">
+
+            <div class="preview-title"
+                 id="previewTitle">
+
+                Video
+
+            </div>
+
+            <div class="preview-meta"
+                 id="previewMeta">
+
+                Premium video
+
+            </div>
+
+        </div>
+
 
         <div class="modal-text"
              id="unlockText">
 
-            Watch the required ads to unlock this video.
-            
+            You can open the video directly,
+            or watch a rewarded ad to unlock
+            the premium option.
+
         </div>
+
 
         <div class="progress">
 
@@ -332,6 +430,7 @@ body{
 
         </div>
 
+
         <div class="ad-count"
              id="adCount">
 
@@ -339,14 +438,25 @@ body{
 
         </div>
 
+
         <div class="modal-buttons">
+
+
+            <button class="open-video"
+                    onclick="openDirectVideo()">
+
+                ▶ Open Video
+
+            </button>
+
 
             <button class="watch-ad"
                     onclick="watchAd()">
 
-                ▶ Watch Ad
+                🎁 Watch Ad
 
             </button>
+
 
             <button class="cancel"
                     onclick="closeModal()">
@@ -355,17 +465,24 @@ body{
 
             </button>
 
+
         </div>
 
     </div>
 
 </div>
 
+
 <script>
+
+/* =========================
+   TELEGRAM
+========================= */
 
 const tg =
     window.Telegram &&
     window.Telegram.WebApp;
+
 
 if(tg){
 
@@ -375,6 +492,11 @@ if(tg){
 
 }
 
+
+/* =========================
+   VARIABLES
+========================= */
+
 let videos = [];
 
 let currentPage = 1;
@@ -383,14 +505,16 @@ const perPage = 8;
 
 let selectedVideo = null;
 
+let defaultRequiredAds = 3;
+
 let requiredAds = 3;
 
 let completedAds = 0;
-      
-let adsgramBlockId = "52566";
-      
+
+let adsgramBlockId = "";
+
 let watchingAd = false;
-      
+
 let currentCategory = "All";
 
 
@@ -403,19 +527,66 @@ async function loadConfig(){
     try{
 
         const response =
-            await fetch("/api/config");
+            await fetch(
+                "/api/config",
+                {
+                    cache:"no-store"
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Config request failed"
+            );
+
+        }
+
 
         const config =
             await response.json();
 
-        requiredAds =
+
+        defaultRequiredAds =
             Number(
                 config.requiredAdsDefault || 3
             );
 
+
+        /*
+         * IMPORTANT:
+         *
+         * AdsGram Block ID এখন
+         * hardcode করা নেই।
+         *
+         * নতুন Active Block ID
+         * Admin Panel থেকে সেট
+         * করা হবে।
+         */
+
+        adsgramBlockId =
+            String(
+                config.adsgramBlockId || ""
+            ).trim();
+
+
+        console.log(
+            "AdsGram Block:",
+            adsgramBlockId
+        );
+
+
     }catch(error){
 
-        console.log(error);
+        console.log(
+            "Config error:",
+            error
+        );
+
+        defaultRequiredAds = 3;
+
+        adsgramBlockId = "";
 
     }
 
@@ -431,22 +602,52 @@ async function loadVideos(){
     try{
 
         const response =
-            await fetch("/api/videos");
+            await fetch(
+                "/api/videos",
+                {
+                    cache:"no-store"
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Video request failed"
+            );
+
+        }
+
 
         videos =
             await response.json();
+
+
+        document.getElementById(
+            "loading"
+        ).style.display = "none";
+
 
         createCategories();
 
         renderVideos();
 
+
     }catch(error){
 
-        console.error(error);
+        console.error(
+            error
+        );
+
+
+        document.getElementById(
+            "loading"
+        ).style.display = "none";
+
 
         document.getElementById(
             "empty"
-        ).style.display="block";
+        ).style.display = "block";
 
     }
 
@@ -459,57 +660,85 @@ async function loadVideos(){
 
 function createCategories(){
 
-    const categories =
-        [
-            "All",
-            ...new Set(
-                videos.map(
-                    video =>
-                    video.category ||
-                    "General"
-                )
+    const categories = [
+
+        "All",
+
+        ...new Set(
+
+            videos.map(
+
+                video =>
+                video.category ||
+                "General"
+
             )
-        ];
+
+        )
+
+    ];
+
 
     const container =
         document.getElementById(
             "categories"
         );
 
+
     container.innerHTML = "";
 
-    categories.forEach(category => {
 
-        const button =
-            document.createElement("button");
+    categories.forEach(
+        category => {
 
-        button.className =
-            "category" +
-            (
-                category === currentCategory
-                ? " active"
-                : ""
-            );
 
-        button.textContent =
-            category;
+            const button =
+                document.createElement(
+                    "button"
+                );
 
-        button.onclick = () => {
 
-            currentCategory =
+            button.className =
+                "category" +
+
+                (
+                    category ===
+                    currentCategory
+
+                    ? " active"
+
+                    : ""
+                );
+
+
+            button.textContent =
                 category;
 
-            currentPage = 1;
 
-            createCategories();
+            button.onclick =
+                () => {
 
-            renderVideos();
+                    currentCategory =
+                        category;
 
-        };
 
-        container.appendChild(button);
+                    currentPage = 1;
 
-    });
+
+                    createCategories();
+
+                    renderVideos();
+
+                };
+
+
+            container.appendChild(
+                button
+            );
+
+
+        }
+    );
 
 }
 
@@ -520,18 +749,26 @@ function createCategories(){
 
 function filteredVideos(){
 
-    if(currentCategory === "All"){
+    if(
+        currentCategory ===
+        "All"
+    ){
 
         return videos;
 
     }
 
+
     return videos.filter(
+
         video =>
+
         (
             video.category ||
             "General"
+
         ) === currentCategory
+
     );
 
 }
@@ -548,42 +785,63 @@ function renderVideos(){
             "videoGrid"
         );
 
+
     const empty =
         document.getElementById(
             "empty"
         );
 
+
     const list =
         filteredVideos();
 
+
     const totalPages =
         Math.max(
+
             1,
+
             Math.ceil(
-                list.length / perPage
+                list.length /
+                perPage
             )
+
         );
 
-    if(currentPage > totalPages){
+
+    if(
+        currentPage >
+        totalPages
+    ){
 
         currentPage =
             totalPages;
 
     }
 
+
     const start =
-        (currentPage - 1) *
-        perPage;
+        (
+            currentPage - 1
+        ) * perPage;
+
 
     const pageVideos =
         list.slice(
+
             start,
+
             start + perPage
+
         );
+
 
     grid.innerHTML = "";
 
-    if(pageVideos.length === 0){
+
+    if(
+        pageVideos.length === 0
+    ){
 
         empty.style.display =
             "block";
@@ -595,95 +853,126 @@ function renderVideos(){
 
     }
 
-    pageVideos.forEach(video => {
 
-        const card =
-            document.createElement("div");
+    pageVideos.forEach(
+        video => {
 
-        card.className =
-            "card";
 
-        const ads =
-            Number(
-                video.requiredAds ||
-                requiredAds ||
-                3
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "card";
+
+
+            const ads =
+                Number(
+
+                    video.requiredAds ||
+
+                    defaultRequiredAds ||
+
+                    3
+
+                );
+
+
+            card.innerHTML = `
+
+                <div class="thumbnail-box">
+
+                    <img
+                        class="thumbnail"
+                        src="${escapeHtml(
+                            video.thumbnailUrl || ""
+                        )}"
+                        onerror="
+                            this.style.opacity='0.25'
+                        "
+                    >
+
+                    <div class="lock">
+
+                        🎁 ${ads} Ads
+
+                    </div>
+
+                    <div class="play">
+
+                        ▶
+
+                    </div>
+
+                </div>
+
+
+                <div class="card-info">
+
+                    <div class="card-title">
+
+                        ${escapeHtml(
+                            video.title ||
+                            "Untitled Video"
+                        )}
+
+                    </div>
+
+
+                    <div class="card-meta">
+
+                        ${escapeHtml(
+                            video.category ||
+                            "General"
+                        )}
+
+                        •
+
+                        ${Number(
+                            video.views || 0
+                        )}
+
+                        views
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            card.onclick =
+                () => openVideo(video);
+
+
+            grid.appendChild(
+                card
             );
 
-        card.innerHTML = `
+        }
+    );
 
-            <div class="thumbnail-box">
-
-                <img
-                    class="thumbnail"
-                    src="${escapeHtml(
-                        video.thumbnailUrl || ""
-                    )}"
-                    onerror="
-                        this.style.opacity='0.25'
-                    "
-                >
-
-                <div class="lock">
-                    🔒 ${ads} Ads
-                </div>
-
-                <div class="play">
-                    ▶
-                </div>
-
-            </div>
-
-            <div class="card-info">
-
-                <div class="card-title">
-
-                    ${escapeHtml(
-                        video.title ||
-                        "Untitled Video"
-                    )}
-
-                </div>
-
-                <div class="card-meta">
-
-                    ${escapeHtml(
-                        video.category ||
-                        "General"
-                    )}
-
-                    •
-
-                    ${Number(
-                        video.views || 0
-                    )} views
-
-                </div>
-
-            </div>
-
-        `;
-
-        card.onclick =
-            () => openVideo(video);
-
-        grid.appendChild(card);
-
-    });
 
     document.getElementById(
         "pageNumber"
     ).textContent =
+
         `Page ${currentPage} / ${totalPages}`;
+
 
     document.getElementById(
         "prevBtn"
     ).disabled =
+
         currentPage <= 1;
+
 
     document.getElementById(
         "nextBtn"
     ).disabled =
+
         currentPage >= totalPages;
 
 }
@@ -695,41 +984,61 @@ function renderVideos(){
 
 function previousPage(){
 
-    if(currentPage > 1){
+    if(
+        currentPage > 1
+    ){
 
         currentPage--;
 
         renderVideos();
 
+
         window.scrollTo({
+
             top:0,
+
             behavior:"smooth"
+
         });
 
     }
 
 }
 
+
 function nextPage(){
 
     const totalPages =
         Math.max(
+
             1,
+
             Math.ceil(
+
                 filteredVideos().length /
                 perPage
+
             )
+
         );
 
-    if(currentPage < totalPages){
+
+    if(
+        currentPage <
+        totalPages
+    ){
 
         currentPage++;
 
         renderVideos();
 
+
         window.scrollTo({
+
             top:0,
+
             behavior:"smooth"
+
         });
 
     }
@@ -738,7 +1047,7 @@ function nextPage(){
 
 
 /* =========================
-   OPEN VIDEO
+   OPEN VIDEO MODAL
 ========================= */
 
 function openVideo(video){
@@ -746,21 +1055,72 @@ function openVideo(video){
     selectedVideo =
         video;
 
+
     completedAds = 0;
+
 
     requiredAds =
         Number(
+
             video.requiredAds ||
-            requiredAds ||
+
+            defaultRequiredAds ||
+
             3
+
         );
+
+
+    document.getElementById(
+        "modalTitle"
+    ).textContent =
+
+        "🎬 " +
+        (
+            video.title ||
+            "Video"
+        );
+
+
+    document.getElementById(
+        "previewTitle"
+    ).textContent =
+
+        video.title ||
+        "Video";
+
+
+    document.getElementById(
+        "previewMeta"
+    ).textContent =
+
+        (
+            video.category ||
+            "General"
+        ) +
+
+        " • " +
+
+        Number(
+            video.views || 0
+        ) +
+
+        " views";
+
 
     document.getElementById(
         "unlockText"
     ).textContent =
-        `Watch ${requiredAds} rewarded ad(s) to unlock this video.`;
+
+        "You can open this video directly. " +
+
+        "Watching rewarded ads gives you " +
+
+        "the premium unlock reward.";
+
 
     updateProgress();
+
 
     document.getElementById(
         "unlockModal"
@@ -781,6 +1141,7 @@ function closeModal(){
     ).style.display =
         "none";
 
+
     selectedVideo =
         null;
 
@@ -788,119 +1149,21 @@ function closeModal(){
 
 
 /* =========================
-   AD WATCH
+   DIRECT VIDEO
 ========================= */
 
-async function watchAd(){
-
-    if(watchingAd){
-        return;
-    }
+function openDirectVideo(){
 
     if(!selectedVideo){
+
         return;
+
     }
 
-    if(!window.Adsgram){
-        alert("AdsGram SDK এখনো লোড হয়নি। আবার চেষ্টা করুন।");
-        return;
-    }
-
-    if(!adsgramBlockId){
-        alert("AdsGram Block ID পাওয়া যায়নি।");
-        return;
-    }
-
-    watchingAd = true;
-
-    const button =
-        document.querySelector(".watch-ad");
-
-    if(button){
-        button.disabled = true;
-        button.textContent = "⏳ Loading Ad...";
-    }
-
-    try{
-
-        const AdController =
-            window.Adsgram.init({
-                blockId: adsgramBlockId
-            });
-
-        const result =
-            await AdController.show();
-
-        /*
-         * Rewarded ad সম্পূর্ণ দেখা হলে
-         * AdsGram promise resolve করবে।
-         */
-
-        if(result && result.done === false){
-            throw new Error(
-                "Ad was not completed."
-            );
-        }
-
-        completedAds++;
-
-        updateProgress();
-
-        if(completedAds >= requiredAds){
-
-            alert(
-                "✅ Ad requirement completed!\n\nVideo unlocked."
-            );
-
-            unlockVideo();
-
-        }else{
-
-            const remaining =
-                requiredAds - completedAds;
-
-            alert(
-                `✅ Ad completed!\n\nআরও ${remaining} টি ad দেখুন।`
-            );
-        }
-
-    }catch(error){
-
-        console.log(
-            "AdsGram error:",
-            error
-        );
-
-        alert(
-            "⚠️ Ad দেখানো যায়নি। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-        );
-
-    }finally{
-
-        watchingAd = false;
-
-        if(button){
-
-            button.disabled = false;
-
-            button.textContent =
-                "▶ Watch Ad";
-        }
-    }
-}
-
-/* =========================
-   UNLOCK VIDEO
-========================= */
-
-function unlockVideo(){
-
-    if(!selectedVideo){
-        return;
-    }
 
     const videoUrl =
         selectedVideo.videoUrl;
+
 
     if(!videoUrl){
 
@@ -909,16 +1172,22 @@ function unlockVideo(){
         );
 
         return;
+
     }
+
 
     closeModal();
 
+
     if(
         tg &&
-        typeof tg.openLink === "function"
+        typeof tg.openLink ===
+        "function"
     ){
 
-        tg.openLink(videoUrl);
+        tg.openLink(
+            videoUrl
+        );
 
     }else{
 
@@ -928,33 +1197,252 @@ function unlockVideo(){
         );
 
     }
+
 }
 
-      
+
+/* =========================
+   WATCH REWARDED AD
+========================= */
+
+async function watchAd(){
+
+    if(watchingAd){
+
+        return;
+
+    }
+
+
+    if(!selectedVideo){
+
+        return;
+
+    }
+
+
+    /*
+     * Active AdsGram block না থাকলে
+     * basic video access বন্ধ হবে না।
+     */
+
+    if(!adsgramBlockId){
+
+        alert(
+
+            "⚠️ Rewarded ad এখনো সক্রিয় হয়নি।\n\n" +
+
+            "আপনি চাইলে ভিডিও সরাসরি Open Video " +
+
+            "দিয়ে দেখতে পারেন।"
+
+        );
+
+        return;
+
+    }
+
+
+    if(!window.Adsgram){
+
+        alert(
+
+            "⚠️ AdsGram SDK এখনো লোড হয়নি।\n\n" +
+
+            "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+
+        );
+
+        return;
+
+    }
+
+
+    watchingAd = true;
+
+
+    const button =
+        document.querySelector(
+            ".watch-ad"
+        );
+
+
+    if(button){
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            "⏳ Loading Ad...";
+
+    }
+
+
+    try{
+
+
+        const AdController =
+            window.Adsgram.init({
+
+                blockId:
+                    adsgramBlockId
+
+            });
+
+
+        const result =
+            await AdController.show();
+
+
+        /*
+         * Ads successfully completed.
+         */
+
+        if(
+            result &&
+            result.done === false
+        ){
+
+            throw new Error(
+                "Ad was not completed."
+            );
+
+        }
+
+
+        completedAds++;
+
+
+        updateProgress();
+
+
+        if(
+            completedAds >=
+            requiredAds
+        ){
+
+            alert(
+
+                "🎉 Reward completed!\n\n" +
+
+                "Premium unlock reward received."
+
+            );
+
+
+            /*
+             * এখানে আমরা automatic
+             * forced redirect করছি না।
+             *
+             * User নিজে Open Video চাপবে।
+             */
+
+        }else{
+
+
+            const remaining =
+
+                requiredAds -
+                completedAds;
+
+
+            alert(
+
+                `🎁 Reward received!\n\n` +
+
+                `আরও ${remaining} টি rewarded ad দেখুন।`
+
+            );
+
+        }
+
+
+    }catch(error){
+
+
+        console.log(
+
+            "AdsGram error:",
+
+            error
+
+        );
+
+
+        alert(
+
+            "⚠️ Rewarded ad দেখানো যায়নি।\n\n" +
+
+            "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+
+        );
+
+
+    }finally{
+
+
+        watchingAd =
+            false;
+
+
+        if(button){
+
+            button.disabled =
+                false;
+
+
+            button.textContent =
+                "🎁 Watch Ad";
+
+        }
+
+    }
+
+}
+
+
 /* =========================
    PROGRESS
 ========================= */
 
 function updateProgress(){
 
+    const safeRequiredAds =
+        Math.max(
+            1,
+            Number(
+                requiredAds || 1
+            )
+        );
+
+
     const percent =
+
         Math.min(
+
             100,
+
             (
                 completedAds /
-                requiredAds
+                safeRequiredAds
+
             ) * 100
+
         );
+
 
     document.getElementById(
         "progressBar"
     ).style.width =
+
         percent + "%";
+
 
     document.getElementById(
         "adCount"
     ).textContent =
-        `${completedAds} / ${requiredAds} ads completed`;
+
+        `${completedAds} / ${safeRequiredAds} ads completed`;
 
 }
 
@@ -966,25 +1454,34 @@ function updateProgress(){
 function escapeHtml(value){
 
     return String(value)
+
         .replace(
+
             /[&<>"']/g,
+
             character => {
 
                 const map = {
 
                     "&":"&amp;",
+
                     "<":"&lt;",
+
                     ">":"&gt;",
+
                     '"':"&quot;",
+
                     "'":"&#039;"
 
                 };
+
 
                 return map[
                     character
                 ];
 
             }
+
         );
 
 }
@@ -1001,6 +1498,7 @@ async function start(){
     await loadVideos();
 
 }
+
 
 start();
 
